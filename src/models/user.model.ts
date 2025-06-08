@@ -1,13 +1,40 @@
-import { pool } from '../db/pool';
+import { pool, supabase } from "../db/pool";
+import { hashPassword } from "../utils/hash.utils";
 
 export const getAllUsers = async () => {
-  const res = await pool.query('SELECT * FROM usuarios');
-  return res.rows;
+  const { data, error } = await supabase.from("usuarios").select();
+
+  return { data, error };
+};
+
+export const getAllMechanics = async () => {
+  const { data, error } = await supabase.from("talleres").select();
+
+  return { data, error };
 };
 
 export const getUserById = async (id: number) => {
-  const res = await pool.query('SELECT * FROM usuarios WHERE id = $1', [id]);
-  return res.rows[0];
+  const { data, error } = await supabase.from("usuarios").select().eq("id", id);
+
+  return { data, error };
+};
+
+type User = {
+  id: number;
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono: string;
+  contraseña: string;
+  rol_id: number;
+};
+type UserResponse = {
+  data: User[],error:any
+};
+export const getUserByEmail = async (email: string): Promise<UserResponse> => {
+  const { data, error } = await supabase.from("usuarios").select().eq("email", email) as UserResponse;
+
+  return { data, error };
 };
 
 export const createUser = async (user: {
@@ -18,31 +45,35 @@ export const createUser = async (user: {
   contraseña: string;
   rol_id: number;
 }) => {
-  const res = await pool.query(
-    'INSERT INTO usuarios (nombre, apellido, email, telefono, contraseña, rol_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-    [user.nombre, user.apellido, user.email, user.telefono, user.contraseña, user.rol_id]
-  );
-  return res.rows[0];
+  const hashedPassword = await hashPassword(user.contraseña)
+  const { data, error } = await supabase
+  .from('usuarios')
+  .insert({ nombre: user.nombre, apellido: user.apellido, email: user.email, telefono: user.telefono, contraseña: hashedPassword, rol_id:user.rol_id })
+  .select()
+
+  return {data, error}
 };
 
-export const updateUser = async (id: number, fields: Partial<{
-  nombre: string;
-  apellido: string;
-  email: string;
-  telefono: string;
-  contraseña: string;
-  rol_id: number;
-}>) => {
-  const keys = Object.keys(fields);
-  const values = Object.values(fields);
+export const updateUser = async (
+  id: number,
+  userInfo: {
+    nombre: string;
+    apellido: string;
+    email: string;
+    telefono: string;
+    // contraseña: string;
+    rol_id: number;
+  }
+) => {
+  const { data, error } = await supabase
+  .from('usuarios')
+  .update(userInfo)
+  .eq('id', id)
+  .select()
 
-  const sets = keys.map((key, i) => `${key} = $${i + 1}`).join(', ');
-  const query = `UPDATE usuarios SET ${sets} WHERE id = $${keys.length + 1} RETURNING *`;
-
-  const res = await pool.query(query, [...values, id]);
-  return res.rows[0];
+  return {data, error}
 };
 
 export const deleteUser = async (id: number) => {
-  await pool.query('DELETE FROM usuarios WHERE id = $1', [id]);
+  await pool.query("DELETE FROM usuarios WHERE id = $1", [id]);
 };
