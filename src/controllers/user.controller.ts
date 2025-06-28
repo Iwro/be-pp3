@@ -42,7 +42,8 @@ export const updateUser = async (req: Request, res: Response) => {
 export const loginUser = async (req: Request, res: Response) => {
   const { email, contraseña } = req.body;
   const usuario = await User.getUserByEmail(email)
-
+  console.log(usuario);
+  
   if (usuario.data?.length == 0) {
     res.status(401).json({ message: 'Usuario no encontrado' });
   } 
@@ -55,7 +56,7 @@ export const loginUser = async (req: Request, res: Response) => {
   }
 
   const token = signToken(
-    { id: usuario.data[0].id, rol_id: usuario.data[0].rol_id, email: usuario.data[0].email }
+    { id: usuario.data[0].id, rol_id: usuario.data[0].rol_id, email: usuario.data[0].email, telefono: usuario.data[0].telefono }
   );
 
   res.status(200).json({token})
@@ -64,6 +65,29 @@ export const loginUser = async (req: Request, res: Response) => {
 export const deleteUser = async (req: Request, res: Response) => {
   await User.deleteUser(parseInt(req.params.id));
   res.status(204).send();
+};
+
+export const getProfile = async (req: Request, res: Response) => {
+  // @ts-ignore → para acceder a req.usuario (set por el middleware)
+  const user = req.usuario;
+  
+  const profile = await User.getProfile(user.id)
+  res.status(200).json(profile)
+  // try {
+    // const { data, error } = await supabase
+    //   .from("usuarios")
+    //   .select("*")
+    //   .eq("id", user.id)
+    //   .single();
+
+    // if (error) {
+    //   return res.status(500).json({ message: "Error al obtener perfil", error: error.message });
+    // }
+
+    // return res.json({ perfil: data });
+  // } catch (err: any) {
+  //   return res.status(500).json({ message: "Error interno", error: err.message });
+  // }
 };
 
 export interface AuthRequest extends Request {

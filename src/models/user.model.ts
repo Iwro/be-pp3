@@ -77,3 +77,14 @@ export const updateUser = async (
 export const deleteUser = async (id: number) => {
   await pool.query("DELETE FROM usuarios WHERE id = $1", [id]);
 };
+
+export const getProfile = async (id: number) => {
+  const { data, error } = await getUserById(id)
+  // await supabase
+  // .from("usuarios")
+  // .select("*")
+  // .eq("id", id)
+  // .single();
+
+  return {data, error}
+};
