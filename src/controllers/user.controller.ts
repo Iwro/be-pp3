@@ -40,7 +40,7 @@ export const updateUser = async (req: Request, res: Response) => {
 };
 
 export const loginUser = async (req: Request, res: Response) => {
-  const { email, contraseña } = req.body;
+  const { email, contrasena } = req.body;
   const usuario = await User.getUserByEmail(email)
   console.log(usuario);
   
@@ -49,10 +49,12 @@ export const loginUser = async (req: Request, res: Response) => {
   } 
   // const userInputPass = usuario.data;
 
-  const contraseñaValida = await comparePassword(contraseña, usuario.data[0].contraseña)
-  // res.status(215).json(usuario.data[0].contraseña || usuario)
-  if (!contraseñaValida) {
-    res.status(401).json({ message: 'Contraseña incorrecta' });
+  const contrasenaValida = await comparePassword(contrasena, usuario.data[0].contrasena)
+  // res.status(215).json(usuario.data[0].contrasena || usuario)
+  console.log(contrasenaValida, usuario.data[0].contrasena, contrasena);
+  
+  if (!contrasenaValida) {
+    res.status(401).json({ message: 'contrasena incorrecta' });
   }
 
   const token = signToken(
@@ -89,6 +91,17 @@ export const getProfile = async (req: Request, res: Response) => {
   //   return res.status(500).json({ message: "Error interno", error: err.message });
   // }
 };
+
+export const createUserShop = async (req: Request, res: Response) => {
+  const {usuario, taller} = await User.createUserShop(req.body);
+
+  
+  if (!usuario || !taller) {
+    res.status(400).json({error: "Hubo un error"})
+  } else {
+    res.status(201).json(taller);
+  }
+}; 
 
 export interface AuthRequest extends Request {
   usuario?: any;

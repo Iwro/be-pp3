@@ -25,14 +25,18 @@ type User = {
   apellido: string;
   email: string;
   telefono: string;
-  contraseña: string;
+  contrasena: string;
   rol_id: number;
 };
 type UserResponse = {
-  data: User[],error:any
+  data: User[];
+  error: any;
 };
 export const getUserByEmail = async (email: string): Promise<UserResponse> => {
-  const { data, error } = await supabase.from("usuarios").select().eq("email", email) as UserResponse;
+  const { data, error } = (await supabase
+    .from("usuarios")
+    .select()
+    .eq("email", email)) as UserResponse;
 
   return { data, error };
 };
@@ -42,16 +46,25 @@ export const createUser = async (user: {
   apellido: string;
   email: string;
   telefono: string;
-  contraseña: string;
+  contrasena: string;
   rol_id: number;
 }) => {
-  const hashedPassword = await hashPassword(user.contraseña)
+  const hashedPassword = await hashPassword(user.contrasena);
+  console.log("CONTRA HASHEADA", hashedPassword);
+  
   const { data, error } = await supabase
-  .from('usuarios')
-  .insert({ nombre: user.nombre, apellido: user.apellido, email: user.email, telefono: user.telefono, contraseña: hashedPassword, rol_id:user.rol_id })
-  .select()
+    .from("usuarios")
+    .insert({
+      nombre: user.nombre,
+      apellido: user.apellido,
+      email: user.email,
+      telefono: user.telefono,
+      contrasena: hashedPassword,
+      rol_id: user.rol_id,
+    })
+    .select();
 
-  return {data, error}
+  return { data, error };
 };
 
 export const updateUser = async (
@@ -61,17 +74,17 @@ export const updateUser = async (
     apellido: string;
     email: string;
     telefono: string;
-    // contraseña: string;
+    // contrasena: string;
     rol_id: number;
   }
 ) => {
   const { data, error } = await supabase
-  .from('usuarios')
-  .update(userInfo)
-  .eq('id', id)
-  .select()
+    .from("usuarios")
+    .update(userInfo)
+    .eq("id", id)
+    .select();
 
-  return {data, error}
+  return { data, error };
 };
 
 export const deleteUser = async (id: number) => {
@@ -79,12 +92,66 @@ export const deleteUser = async (id: number) => {
 };
 
 export const getProfile = async (id: number) => {
-  const { data, error } = await getUserById(id)
+  const { data, error } = await getUserById(id);
   // await supabase
   // .from("usuarios")
   // .select("*")
   // .eq("id", id)
   // .single();
 
-  return {data, error}
+  return { data, error };
+};
+
+export const createUserShop = async (user: {
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono: string;
+  contrasena: string;
+  rol_id: number;
+  nombre_taller: string;
+  ciudad: string;
+  direccion: string;
+  barrio: string;
+  horario_inicio: number;
+  horario_fin: number;
+  duracion_turno: number;
+  dias_laborales: string[];
+}) => {
+
+  const { data: createdUser, error: userError } = await createUser({
+    nombre: user.nombre,
+    apellido: user.apellido,
+    email: user.email,
+    telefono: user.telefono,
+    contrasena: user.contrasena,
+    rol_id: user.rol_id})
+
+    if (!createdUser || createdUser.length === 0) throw new Error('No se insertó usuario')
+
+    const userId = createdUser?.[0]?.id;
+
+  const { data: tallerData, error: tallerError } = await supabase
+  .from('talleres')
+  .insert({
+    usuario_id: userId,
+    nombre_taller:user.nombre_taller,
+    ciudad:user.ciudad,
+    direccion:user.direccion,
+    barrio:user.barrio,
+    horario_inicio:user.horario_inicio,
+    horario_fin:user.horario_fin,
+    duracion_turno:user.duracion_turno,
+    dias_laborales:user.dias_laborales
+  })
+  .select()
+  
+  if (tallerError) {console.log(tallerError)}
+  if (!tallerData || tallerData.length === 0) throw new Error('No se pudo crear taller '+tallerError)
+
+  // console.log("DATA101", createdUser);
+  return {
+    usuario: createdUser[0],
+    taller: tallerData[0],
+  }
 };

@@ -9,9 +9,8 @@ router.get("/mecanicos", UserController.getMechanics);
 router.get("/usuario/:id", UserController.getUser);
 router.post("/login", UserController.loginUser);
 router.get("/profile", verificarToken, UserController.getProfile);
-
-
 router.post("/usuario", UserController.createUser);
+router.post("/usuario/shop", UserController.createUserShop);
 router.put("/:id", UserController.updateUser);
 router.delete("/:id", UserController.deleteUser);
 
