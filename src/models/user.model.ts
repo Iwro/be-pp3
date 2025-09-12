@@ -41,6 +41,51 @@ export const getUserByEmail = async (email: string): Promise<UserResponse> => {
   return { data, error };
 };
 
+export const getMechanicById = async (id: number) => {
+  const { data, error } = await supabase.from("talleres").select().eq("id", id);
+
+  return { data, error };
+};
+
+export const obtenerHorariosDisponibles = async (tallerId: number, fecha: string) => {
+  const { data, error } = await getMechanicById(tallerId) as any;
+  const occupied = await obtenerHorariosOcupados(tallerId, fecha) as any;
+
+  const horasOcupadas = occupied.data?.map((t: { hora: Date; })=>{return t.hora});
+  
+  let horario_inicio = data[0].horario_inicio;
+  let horario_fin = data[0].horario_fin;
+  // let duracion_turno = data[0].duracion_turno;
+
+  let horarioInicioParaSumar = new Date(`${fecha}T${horario_inicio}`).getHours()
+  let horarioFinParaSumar = new Date(`${fecha}T${horario_fin}`).getHours()
+  
+  const disponibles: string[] = [];
+
+  while (horarioInicioParaSumar < horarioFinParaSumar) {  
+    let horaString = formatNumberToTime(parseInt(horario_inicio))
+
+    if (!horasOcupadas.includes(horaString)) {    
+      disponibles.push(horaString);
+    }    
+
+    horarioInicioParaSumar = horarioInicioParaSumar+1
+    horario_inicio = parseInt(horario_inicio)+1
+  
+    }
+  
+  return disponibles;
+};
+
+export const obtenerHorariosOcupados = async (tallerId: number, fecha: string) => {
+  const { data, error } = await supabase
+    .from("turnos")
+    .select()
+    .eq("taller_id", tallerId).eq("fecha", fecha);
+  
+  return { data, error };
+};
+
 export const createUser = async (user: {
   nombre: string;
   apellido: string;
@@ -155,3 +200,37 @@ export const createUserShop = async (user: {
     taller: tallerData[0],
   }
 };
+
+export const createAppointment = async (usuario_id:number,taller_id:number, fecha: string, hora: string) => {
+  const { data, error } = await supabase
+    .from("turnos")
+    .insert({
+      cliente_id: usuario_id,
+      taller_id: taller_id,
+      fecha: fecha,
+      hora: hora
+    }).select();
+    
+    return { data, error };
+
+}
+
+export const getAppointmentsByUser = async(usuario_id:number)=>{
+  const { data, error } = await supabase
+    .from("turnos")
+    .select()
+    .eq("cliente_id", usuario_id);
+
+  return { data, error };
+
+}
+
+function formatNumberToTime(hour: number): string {
+  // Ensure the hour is an integer between 0 and 23 (optional validation)
+  if (hour < 0 || hour > 23) {
+    throw new Error('Hour must be between 0 and 23');
+  }
+  
+  const hh = Math.floor(hour).toString().padStart(2, '0');
+  return `${hh}:00:00`;
+}

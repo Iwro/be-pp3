@@ -7,7 +7,11 @@ const router = Router();
 router.get("/usuarios", UserController.getUsers);
 router.get("/mecanicos", UserController.getMechanics);
 router.get("/usuario/:id", UserController.getUser);
+router.get("/mecanicos/:id", UserController.getMechanic);
+router.get("/turnos/mis-reservas", verificarToken, UserController.getAppointmentsByUser);
 router.post("/login", UserController.loginUser);
+router.get("/mecanicos/turnos/:taller_id{/:fecha}", UserController.getAvailableDates);
+router.post("/turnos/:taller_id", verificarToken, UserController.createAppointment)
 router.get("/profile", verificarToken, UserController.getProfile);
 router.post("/usuario", UserController.createUser);
 router.post("/usuario/shop", UserController.createUserShop);

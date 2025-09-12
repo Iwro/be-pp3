@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 import * as User from "../models/user.model";
 import { comparePassword } from "../utils/hash.utils";
 import { signToken, verifyToken } from "../utils/jwt.utils";
@@ -11,6 +11,12 @@ export const getUsers = async (_req: Request, res: Response) => {
 
 export const getMechanics = async (_req: Request, res: Response) => {
   const { data, error } = await User.getAllMechanics();
+
+  res.json(data);
+};
+
+export const getMechanic = async (req: Request, res: Response) => {
+  const { data, error } = await User.getMechanicById(parseInt(req.params.id));
 
   res.json(data);
 };
@@ -103,6 +109,60 @@ export const createUserShop = async (req: Request, res: Response) => {
   }
 }; 
 
+export const createAppointment = async (req: Request, res: Response) => {
+    // @ts-ignore → para acceder a req.usuario (set por el middleware)
+    const user = req.usuario;
+    const taller = parseInt(req.params.taller_id);
+    const fecha = req.body.fecha;
+    const hora = req.body.hora;
+    
+    const { data, error } = await User.createAppointment(user.id,taller, fecha, hora)
+      
+    if (error) {
+      res.status(400).json({error: "Hubo un error " + error})
+      return;
+    } else {
+      res.status(200).json(data)
+    }
+}
+
+export const getAvailableDates = async (req: Request, res: Response) => {
+  // @ts-ignore → para acceder a req.usuario (set por el middleware)
+  const user = req.usuario;
+  const taller = parseInt(req.params.taller_id);
+  const fecha = req.params.fecha
+  
+  const disponibles = await User.obtenerHorariosDisponibles(taller, fecha)
+  console.log("DISPO", disponibles);
+  res.status(200).json(disponibles)
+  // if (error) {
+  //   res.status(400).json({error: "Hubo un error " + error})
+  //   return;
+  // } else {
+  //   res.status(200).json({data, fecha})
+  // }
+}
+
+export const getAppointmentsByUser = async (req: Request, res: Response) => {
+  // @ts-ignore → lo setea verificarToken
+  const user = req.usuario;
+
+  // try {
+    const { data, error } = await User.getAppointmentsByUser(user.id);
+    if (error){
+      res.status(400).json(error)
+    }
+    res.status(200).json(data)
+}
+  //   if (error) {
+  //     return res.status(400).json({ error: "Hubo un error: " + error });
+  //   }
+
+  //   return res.status(200).json(data);
+  // } catch (err) {
+  //   return res.status(500).json({ error: "Error interno: " + err });
+  // }
+// };
 export interface AuthRequest extends Request {
   usuario?: any;
 }
