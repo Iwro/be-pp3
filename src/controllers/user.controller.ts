@@ -152,18 +152,36 @@ export const getAppointmentsByUser = async (req: Request, res: Response) => {
     if (error){
       res.status(400).json(error)
     }
-    res.status(200).json(data)
+    const reservasConInfo = await reservasConNombreTaller(data as dataMechanic[])
+    
+    res.status(200).json(reservasConInfo)
 }
-  //   if (error) {
-  //     return res.status(400).json({ error: "Hubo un error: " + error });
-  //   }
 
-  //   return res.status(200).json(data);
-  // } catch (err) {
-  //   return res.status(500).json({ error: "Error interno: " + err });
-  // }
-// };
+async function reservasConNombreTaller (reservas: dataMechanic[]){
+const reservasConTaller = await Promise.all(
+    reservas.map(async (reserva) => {
+      const taller = await User.getMechanicById(reserva.taller_id) as any;
+        
+          return {
+            ...reserva,
+            taller_nombre: taller.data[0].nombre_taller,
+            taller_direccion: taller.data[0].direccion // agregamos el campo
+          };
+
+    })  );
+
+    return reservasConTaller
+}
+
 export interface AuthRequest extends Request {
   usuario?: any;
 }
 
+interface dataMechanic {
+      id: number;
+    cliente_id: number;
+    taller_id: number;
+    fecha: string;
+    hora: string;
+    estado: string
+}
