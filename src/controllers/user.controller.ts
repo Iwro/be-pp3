@@ -3,6 +3,30 @@ import * as User from "../models/user.model";
 import { comparePassword } from "../utils/hash.utils";
 import { signToken, verifyToken } from "../utils/jwt.utils";
 
+export const getDashboard = async (req: Request, res: Response) => { 
+  const { desde, hasta } = req.query; 
+
+  const fechaInicio = desde || "2025-01-01";
+  // const fechaFin = hasta || new Date().toISOString().split("T")[0];
+  const fechaFin = hasta || "2025-12-31";
+
+  const  {
+      periodo,
+      talleresNuevos,
+      turnosReservados,
+      totalIngresos,
+      resumenPorMes,
+    }  = await User.getDashboard(fechaInicio as string, fechaFin as string);
+
+  res.json({
+      periodo,
+      talleresNuevos,
+      turnosReservados,
+      totalIngresos,
+      resumenPorMes,
+    });
+};
+
 export const getUsers = async (_req: Request, res: Response) => {
   const { data, error } = await User.getAllUsers();
 
@@ -45,6 +69,23 @@ export const updateUser = async (req: Request, res: Response) => {
   res.json(user);
 };
 
+export const getBarrios = async (req: Request, res: Response) => {
+  const barrios = await User.getBarrios()
+  res.status(200).json(barrios);
+}
+
+export const getTalleres = async (req: Request, res: Response) => {
+    const {data, error} = await User.getTalleres()
+  res.status(200).json(data);
+}
+
+export const getBarriosById = async (req: Request, res: Response) => {
+  const barrioId = req.params.id
+  const talleresByBarrio = await User.getTalleresByBarrioId(parseInt(barrioId))
+  res.status(200).json(talleresByBarrio);
+
+}
+
 export const loginUser = async (req: Request, res: Response) => {
   const { email, contrasena } = req.body;
   const usuario = await User.getUserByEmail(email)
@@ -64,7 +105,11 @@ export const loginUser = async (req: Request, res: Response) => {
   }
 
   const token = signToken(
-    { id: usuario.data[0].id, rol_id: usuario.data[0].rol_id, email: usuario.data[0].email, telefono: usuario.data[0].telefono }
+    { id: usuario.data[0].id,
+      rol_id: usuario.data[0].rol_id,
+      email: usuario.data[0].email,
+      telefono: usuario.data[0].telefono
+       }
   );
 
   res.status(200).json({token})
@@ -80,6 +125,11 @@ export const getProfile = async (req: Request, res: Response) => {
   const user = req.usuario;
   
   const profile = await User.getProfile(user.id)
+
+  // console.log( "PROFILE",profile);
+  // if (profile?.data?[0]?.rol_id == 2) {
+
+  // }
   res.status(200).json(profile)
   // try {
     // const { data, error } = await supabase
@@ -98,14 +148,36 @@ export const getProfile = async (req: Request, res: Response) => {
   // }
 };
 
+export const getProfileShop = async (req: Request, res: Response) => {
+    // @ts-ignore → para acceder a req.usuario (set por el middleware)
+  const user = req.usuario;
+
+  const profileShop = await User.getProfileShop(user.id)
+  res.status(200).json(profileShop)
+
+}
+
 export const createUserShop = async (req: Request, res: Response) => {
   const {usuario, taller} = await User.createUserShop(req.body);
-
+  console.log("lat lng: ", req.body);
+  
   
   if (!usuario || !taller) {
     res.status(400).json({error: "Hubo un error"})
   } else {
     res.status(201).json(taller);
+  }
+}; 
+
+export const updateUserShop = async (req: Request, res: Response) => {
+  const {data, error} = await User.updateUserShop(req.body);
+  // console.log("lat lng: ", req.body);
+  
+  
+  if (error) {
+    res.status(400).json({error: "Hubo un error"})
+  } else {
+    res.status(201).json(data);
   }
 }; 
 
@@ -133,29 +205,81 @@ export const getAvailableDates = async (req: Request, res: Response) => {
   const fecha = req.params.fecha
   
   const disponibles = await User.obtenerHorariosDisponibles(taller, fecha)
-  console.log("DISPO", disponibles);
+
   res.status(200).json(disponibles)
-  // if (error) {
-  //   res.status(400).json({error: "Hubo un error " + error})
-  //   return;
-  // } else {
-  //   res.status(200).json({data, fecha})
-  // }
+
 }
 
 export const getAppointmentsByUser = async (req: Request, res: Response) => {
   // @ts-ignore → lo setea verificarToken
   const user = req.usuario;
+  const userId = user.id;
+  const userRol = user.rol_id;
 
-  // try {
-    const { data, error } = await User.getAppointmentsByUser(user.id);
-    if (error){
-      res.status(400).json(error)
-    }
-    const reservasConInfo = await reservasConNombreTaller(data as dataMechanic[])
+  
+  // con division de roles
+// try {
+    let query;
+
+    if (userRol === 1) {
+      // Cliente: ver sus turnos
+      query = await User.getClientAppointments(userId)
+      
+    } else if (userRol === 2) {
+      // Taller: ver turnos que le reservaron
+      query = await User.getShopAppointments(userId)
+      console.log("QUERRYYY", query);
+    } 
+
+
+    res.status(200).json(query);
+
+  // sin division de roles
+    // const { data, error } = await User.getAppointmentsByUser(user.id);
+    // if (error){
+    //   res.status(400).json(error)
+    // }
+    // const reservasConInfo = await reservasConNombreTaller(data as dataMechanic[])
     
-    res.status(200).json(reservasConInfo)
+    // res.status(200).json(reservasConInfo)
 }
+
+export const updateAmount = async (req: Request, res: Response) => {
+    // @ts-ignore → lo setea verificarToken
+  const user = req.usuario;
+
+  const { id } = req.params;
+  const { precio } = req.body;
+
+  const {data, error} = await User.updateAmount(parseInt(id), precio);
+  console.log("informacion", {id, precio});
+  console.log("UPDATE", {data, error});
+  
+  res.status(200).json(data)
+
+}
+ 
+export const createPreference = async (req: Request, res: Response) => {
+  // @ts-ignore → lo setea verificarToken
+  const user = req.usuario;
+  const { turnoId } = req.body;
+
+  // buscar turno del cliente
+  const {data:turnos, error:errorTurno} = await User.getClientAppointmentById(turnoId,user.id)
+  console.log("El turno: ", turnos,errorTurno);
+  
+  // crear registro de pago
+  const { data: pagoInsert, error: errorInsert } = await User.createPaymentRecord(turnos?.id, user.id, turnos?.taller_id, turnos?.monto_asignado)
+  
+  const pagoId = pagoInsert?.id;
+  console.log("El pago Id: ", pagoId);
+  
+  const referenciaMercadoPago = await User.createMercadoPagoPreference(turnos?.id,turnos?.monto_asignado, pagoId)
+  console.log("REFE: ", referenciaMercadoPago);
+  
+  res.status(200).json({ preferenceId: referenciaMercadoPago });
+
+  }
 
 async function reservasConNombreTaller (reservas: dataMechanic[]){
 const reservasConTaller = await Promise.all(
